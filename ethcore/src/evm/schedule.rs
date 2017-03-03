@@ -15,6 +15,7 @@
 // along with Parity.  If not, see <http://www.gnu.org/licenses/>.
 
 //! Cost schedule and other parameterisations for the EVM.
+use spec::spec::CommonParams;
 
 /// Definition of the cost schedule and other parameterisations for the EVM.
 pub struct Schedule {
@@ -99,6 +100,19 @@ pub struct Schedule {
 	pub no_empty: bool,
 	/// Kill empty accounts if touched.
 	pub kill_empty: bool,
+	/// Kill basic accounts below this balance if touched.
+	pub kill_dust: CleanDustMode,
+}
+
+/// Dust accounts cleanup mode.
+#[derive(PartialEq, Eq)]
+pub enum CleanDustMode {
+	/// Dust cleanup is disabled.
+	Off,
+	/// Basic dust accounts will be removed.
+	BasicOnly,
+	/// Basic and contract dust accounts will be removed.
+	WithCodeAndStorage,
 }
 
 impl Schedule {
@@ -155,6 +169,21 @@ impl Schedule {
 			sub_gas_cap_divisor: Some(64),
 			no_empty: no_empty,
 			kill_empty: kill_empty,
+			kill_dust: CleanDustMode::Off,
+		}
+	}
+
+	/// Schedule for the post-EIP-150-era of the Ethereum main net.
+	pub fn from_params(block_number: u64, params: &CommonParams) -> Schedule {
+		let mut schedule = Schedule::new_post_eip150(usize::max_value(), true, true, true);
+		schedule.apply_params(block_number, params);
+		schedule
+	}
+
+	/// Apply common spec config parameters to the schedule.
+	pub fn apply_params(&mut self, block_number: u64, params: &CommonParams) {
+		if block_number >= params.dust_protection_transition {
+			self.kill_dust = if params.remove_dust_contracts { CleanDustMode::WithCodeAndStorage } else { CleanDustMode::BasicOnly };
 		}
 	}
 
@@ -200,6 +229,7 @@ impl Schedule {
 			sub_gas_cap_divisor: None,
 			no_empty: false,
 			kill_empty: false,
+			kill_dust: CleanDustMode::Off,
 		}
 	}
 }

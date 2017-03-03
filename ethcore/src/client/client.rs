@@ -690,7 +690,7 @@ impl Client {
 			}
 
 			let root = header.state_root();
-			State::from_existing(db, root, self.engine.account_start_nonce(), self.factories.clone()).ok()
+			State::from_existing(db, root, self.engine.account_start_nonce(block_number), self.factories.clone()).ok()
 		})
 	}
 
@@ -715,7 +715,7 @@ impl Client {
 		State::from_existing(
 			self.state_db.lock().boxed_clone_canon(&header.hash()),
 			header.state_root(),
-			self.engine.account_start_nonce(),
+			self.engine.account_start_nonce(header.number()),
 			self.factories.clone())
 		.expect("State root of best block header always valid.")
 	}

@@ -145,6 +145,8 @@ pub enum ExecutionError {
 		/// Actual balance.
 		got: U512
 	},
+	/// Returned when transacting from a non-existing account with dust protection enabled.
+	SenderMustExist,
 	/// Returned when internal evm error occurs.
 	Internal(String),
 	/// Returned when generic transaction occurs
@@ -172,6 +174,7 @@ impl fmt::Display for ExecutionError {
 			NotEnoughCash { ref required, ref got } =>
 				format!("Cost of transaction exceeds sender balance. {} is required \
 					but the sender only has {}", required, got),
+			SenderMustExist => "Transacting from an empty account".to_owned(),
 			Internal(ref msg) => msg.clone(),
 			TransactionMalformed(ref err) => format!("Malformed transaction: {}", err),
 		};

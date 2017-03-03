@@ -22,7 +22,7 @@ use engines::Engine;
 use types::executed::CallType;
 use env_info::EnvInfo;
 use error::ExecutionError;
-use evm::{self, Ext, Factory, Finalize};
+use evm::{self, Ext, Factory, Finalize, CleanDustMode};
 use externalities::*;
 use trace::{FlatTrace, Tracer, NoopTracer, ExecutiveTracer, VMTrace, VMTracer, ExecutiveVMTracer, NoopVMTracer};
 use transaction::{Action, SignedTransaction};
@@ -130,6 +130,11 @@ impl<'a, B: 'a + StateBackend> Executive<'a, B> {
 
 		if t.gas < base_gas_required {
 			return Err(From::from(ExecutionError::NotEnoughBaseGas { required: base_gas_required, got: t.gas }));
+		}
+
+		// TODO: unless UNSIGNED_SENDER
+		if check_nonce && schedule.kill_dust != CleanDustMode::Off && !self.state.exists(&sender)? {
+			return Err(From::from(ExecutionError::SenderMustExist));
 		}
 
 		let init_gas = t.gas - base_gas_required;
@@ -456,11 +461,8 @@ impl<'a, B: 'a + StateBackend> Executive<'a, B> {
 		}
 
 		// perform garbage-collection
-		for address in &substate.garbage {
-			if self.state.exists(address)? && !self.state.exists_and_not_null(address)? {
-				self.state.kill_account(address);
-			}
-		}
+		let min_balance = if schedule.kill_dust != CleanDustMode::Off { Some(U256::from(schedule.tx_gas) * t.gas_price) } else { None };
+		self.state.kill_garbage(schedule.kill_empty, &min_balance, schedule.kill_dust == CleanDustMode::WithCodeAndStorage)?;
 
 		match result {
 			Err(evm::Error::Internal(msg)) => Err(ExecutionError::Internal(msg)),

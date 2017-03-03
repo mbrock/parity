@@ -175,12 +175,14 @@ impl Engine for Ethash {
 		} else if env_info.number < self.ethash_params.eip150_transition {
 			Schedule::new_homestead()
 		} else {
-			Schedule::new_post_eip150(
+			let mut schedule = Schedule::new_post_eip150(
 				self.ethash_params.max_code_size as usize,
 				env_info.number >= self.ethash_params.eip160_transition,
 				env_info.number >= self.ethash_params.eip161abc_transition,
-				env_info.number >= self.ethash_params.eip161d_transition
-			)
+				env_info.number >= self.ethash_params.eip161d_transition,
+			);
+			schedule.apply_params(env_info.number, &self.params);
+			schedule
 		}
 	}
 

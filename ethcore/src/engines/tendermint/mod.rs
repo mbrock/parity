@@ -401,8 +401,8 @@ impl Engine for Tendermint {
 		]
 	}
 
-	fn schedule(&self, _env_info: &EnvInfo) -> Schedule {
-		Schedule::new_post_eip150(usize::max_value(), true, true, true)
+	fn schedule(&self, env_info: &EnvInfo) -> Schedule {
+		Schedule::from_params(env_info.number, &self.params)
 	}
 
 	fn populate_from_parent(&self, header: &mut Header, parent: &Header, gas_floor_target: U256, _gas_ceil_target: U256) {

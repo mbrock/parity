@@ -57,6 +57,12 @@ pub struct CommonParams {
 	pub eip98_transition: BlockNumber,
 	/// Validate block receipts root.
 	pub validate_receipts_transition: u64,
+	/// Number of first block where dust cleanup rules (EIP-168 and EIP169) begin.
+	pub dust_protection_transition: BlockNumber,
+	/// Nonce cap increase per block. Nonce cap is only checked if dust protection is enabled.
+	pub nonce_cap_increment : u64,
+	/// Enable dust cleanup for contracts.
+	pub remove_dust_contracts : bool,
 }
 
 impl From<ethjson::spec::Params> for CommonParams {
@@ -71,6 +77,9 @@ impl From<ethjson::spec::Params> for CommonParams {
 			fork_block: if let (Some(n), Some(h)) = (p.fork_block, p.fork_hash) { Some((n.into(), h.into())) } else { None },
 			eip98_transition: p.eip98_transition.map_or(0, Into::into),
 			validate_receipts_transition: p.validate_receipts_transition.map_or(0, Into::into),
+			dust_protection_transition: p.dust_protection_transition.map_or(BlockNumber::max_value(), Into::into),
+			nonce_cap_increment: p.nonce_cap_increment.map_or(64, Into::into),
+			remove_dust_contracts: p.remove_dust_contracts.unwrap_or(false),
 		}
 	}
 }
@@ -286,7 +295,7 @@ impl Spec {
 			gas_limit: U256::max_value(),
 		};
 		let from = Address::default();
-		let start_nonce = self.engine.account_start_nonce();
+		let start_nonce = self.engine.account_start_nonce(0);
 
 		let mut state = State::from_existing(db, root, start_nonce, factories.clone())?;
 		// Mutate the state with each constructor.
@@ -394,7 +403,7 @@ mod tests {
 		let spec = Spec::new_test_constructor();
 		let mut db_result = get_temp_state_db();
 		let db = spec.ensure_db_good(db_result.take(), &Default::default()).unwrap();
-		let state = State::from_existing(db.boxed_clone(), spec.state_root(), spec.engine.account_start_nonce(), Default::default()).unwrap();
+		let state = State::from_existing(db.boxed_clone(), spec.state_root(), spec.engine.account_start_nonce(0), Default::default()).unwrap();
 		let expected = H256::from_str("0000000000000000000000000000000000000000000000000000000000000001").unwrap();
 		assert_eq!(state.storage_at(&Address::from_str("0000000000000000000000000000000000000005").unwrap(), &H256::zero()).unwrap(), expected);
 	}
