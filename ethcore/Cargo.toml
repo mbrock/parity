@@ -34,7 +34,7 @@ ethstore = { path = "../ethstore" }
 evmjit = { path = "../evmjit", optional = true }
 futures = "0.1"
 hardware-wallet = { path = "../hw" }
-hyper = { git = "https://github.com/paritytech/hyper", default-features = false }
+hyper = { git = "https://github.com/mbrock/hyper", default-features = false }
 itertools = "0.5"
 lazy_static = "0.2"
 linked-hash-map = "0.3.0"
